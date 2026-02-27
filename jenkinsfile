@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USERNAME = "ambaldhage"
+    }
+
+    stages {
+
+        stage('Clone Repository') {
+            steps {
+                echo "Code already checked out by Jenkins"
+            }
+        }
+
+        stage('Build Backend Image') {
+            steps {
+                dir('backend') {
+                    bat "docker build -t ${DOCKERHUB_USERNAME}/fullstack-backend:latest ."
+                }
+            }
+        }
+
+        stage('Build Frontend Image') {
+            steps {
+                dir('frontend') {
+                    bat "docker build -t ${DOCKERHUB_USERNAME}/fullstack-frontend:latest ."
+                }
+            }
+        }
+
+        stage('Build AI Agent Image') {
+            steps {
+                dir('ai-agent') {
+                    bat "docker build -t ${DOCKERHUB_USERNAME}/fullstack-ai-agent:latest ."
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
+                }
+            }
+        }
+
+        stage('Push Images') {
+            steps {
+                bat "docker push ${DOCKERHUB_USERNAME}/fullstack-backend:latest"
+                bat "docker push ${DOCKERHUB_USERNAME}/fullstack-frontend:latest"
+                bat "docker push ${DOCKERHUB_USERNAME}/fullstack-ai-agent:latest"
+            }
+        }
+    }
+}
